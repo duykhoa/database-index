@@ -4,7 +4,6 @@ require_relative "./timelog"
 include Timelog
 
 class Product < ActiveRecord::Base
-
   establish_connection adapter: "sqlite3", database: "product-database.db"
 
   class << self
@@ -54,6 +53,7 @@ class Product < ActiveRecord::Base
   end
 end
 
+Product.connection.disable_query_cache!
 # This commands below is used to demonstrate the advantage of database index in Rails.
 
 # Run the migration to create products table in product-database
@@ -81,17 +81,16 @@ timelog("use OR") { puts Product.where(name: "Product 999").or(Product.where(nam
 timelog("In a range of value") { puts Product.where(serial: ["Product 999", "Product 998"]).explain }
 
 # Experiment with multiple columns query
-#
-# Without an index for name
+puts "There is only index for name, not for serial column"
 timelog("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1").explain }
 timelog("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999").explain }
 
 # With no index
 Product.reset!
 
+puts "There is no index"
 timelog("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1").explain }
 timelog("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999").explain }
-
 
 # With Index for name and serial
 Product.reset!
