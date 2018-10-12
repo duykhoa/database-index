@@ -53,5 +53,16 @@ end
 # This commands below is used to demonstrate the advantage of database index in Rails.
 
 # Run the migration to create products table in product-database
-Product.migrate!
-Product.display
+# NOTE: Turn me off after use
+#Product.migrate!
+
+# Display all data in products table
+#Product.display
+
+# Explain the simple SQL query
+#puts Product.where(name: "Product 999").explain
+#
+# Add index for name
+# Rerun same query and see the different
+#Product.add_index "name", unique: true
+#puts Product.where(name: "Product 999").explain
