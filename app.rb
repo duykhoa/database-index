@@ -1,4 +1,5 @@
 require "active_record"
+require_relative "./timelog"
 
 class Product < ActiveRecord::Base
   establish_connection adapter: "sqlite3", database: "product-database.db"
