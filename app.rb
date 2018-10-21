@@ -77,36 +77,36 @@ puts Product.where(name: "Product 999").explain
 timelog { Product.where(name: "Product 999") }
 
 # OR and IN operator
-timelog("use OR") { puts Product.where(name: "Product 999").or(Product.where(name: "Product 998")).explain }
-timelog("In a range of value") { puts Product.where(serial: ["Product 999", "Product 998"]).explain }
+timelog("use OR") { puts Product.where(name: "Product 999").or(Product.where(name: "Product 998")) }
+timelog("In a range of value") { puts Product.where(serial: ["Product 999", "Product 998"]) }
 
 # Experiment with multiple columns query
 puts "There is only index for name, not for serial column"
-timelog("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1").explain }
-timelog("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999").explain }
+timelog("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1") }
+timelog("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999") }
 
 # With no index
 Product.reset!
 
 puts "There is no index"
-timelog("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1").explain }
-timelog("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999").explain }
+timelog("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1") }
+timelog("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999") }
 
 # With Index for name and serial
 Product.reset!
 Product.add_index ["name", "serial"]
 
 puts Product.where(name: "Product 999", serial: "P-0999-0-1").explain
-timelog("name > serial") { puts Product.where(name: "Product 999", serial: "P-0999-0-1").explain }
+timelog("name > serial") { puts Product.where(name: "Product 999", serial: "P-0999-0-1") }
 
 # Reverse order of serial and name column in where clause
 puts Product.where(serial: "P-0999-0-1", name: "Product 999").explain
-timelog("serial > name") { puts Product.where(serial: "P-0999-0-1", name: "Product 999").explain }
+timelog("serial > name") { puts Product.where(serial: "P-0999-0-1", name: "Product 999") }
 
 # See if single column query can use multiple columns index
-timelog("single column name") { puts Product.where(name: "Product 999").explain }
-timelog("single column serial") { puts Product.where(serial: "P-0999-0-1").explain }
+timelog("single column name") { puts Product.where(name: "Product 999") }
+timelog("single column serial") { puts Product.where(serial: "P-0999-0-1") }
 
 # OR and IN operator
-timelog("use OR") { puts Product.where(name: "Product 999").or(Product.where(name: "Product 998")).explain }
-timelog("In a range of value") { puts Product.where(serial: ["Product 999", "Product 998"]).explain }
+timelog("use OR") { puts Product.where(name: "Product 999").or(Product.where(name: "Product 998")) }
+timelog("In a range of value") { puts Product.where(serial: ["Product 999", "Product 998"]) }
