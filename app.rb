@@ -75,22 +75,31 @@ experiment { Product.where(name: "Product 999") }
 Product.add_index "name", unique: true
 experiment { Product.where(name: "Product 999") }
 
-# OR and IN operator
+# OR, NOT, IN operator
 experiment("use OR") { Product.where(name: "Product 999").or(Product.where(name: "Product 998")) }
+experiment("use NOT") { Product.where.not(name: "Product 998") }
 experiment("In a range of value") { Product.where(name: ["Product 999", "Product 998"]) }
 
 # Experiment with multiple columns query
 experiment("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1") }
 experiment("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999") }
 
-# With no index
+# With 2 separate index
 Product.reset!
 
-puts "There is no index"
+# With no index
+Product.reset!
+Product.add_index "name", unique: true
+Product.add_index "serial", unique: true
+
 experiment("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1") }
 experiment("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999") }
+experiment("name use OR") { Product.where(name: "Product 999").or(Product.where(serial: "P-0999-0-1")) }
+experiment("name use NOT") { Product.where.not(name: "Product 998") }
+experiment("serial use NOT") { Product.where.not(serial: "P-0999-0-1") }
+experiment("In a range of value") { Product.where(name: ["Product 999", "Product 998"]) }
 
-# With Index for name and serial
+# With only one index for name and serial
 Product.reset!
 Product.add_index ["name", "serial"]
 
