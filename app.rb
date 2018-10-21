@@ -1,7 +1,7 @@
 require "active_record"
-require_relative "./timelog"
+require_relative "./experiment"
 
-include Timelog
+include Experiment
 
 class Product < ActiveRecord::Base
   establish_connection adapter: "sqlite3", database: "product-database.db"
@@ -12,6 +12,7 @@ class Product < ActiveRecord::Base
         connection.create_table table_name do |t|
           t.string :serial
           t.string :name
+          t.integer :price
           t.timestamp
         end
 
@@ -43,7 +44,7 @@ class Product < ActiveRecord::Base
         name = "Product #{i}"
         serial = "P-D#{ i }"
 
-        Product.create!(name: name, serial: serial)
+        Product.create!(name: name, serial: serial, price: [100,200,300,400].sample)
       end
     end
 
@@ -64,49 +65,58 @@ Product.reset!
 # Product.display
 
 # Explain the simple SQL query
-# With timelog, we can see the difference in time consumed to execute the query.
+# With experiment, we can see the difference in time consumed to execute the query.
 # It isn't accurate since the overhead time in ActiveRecord and Ruby, plus the magic caching
 # mechanism of ActiveRecord.
-puts Product.where(name: "Product 999").explain
-timelog { Product.where(name: "Product 999") }
+experiment { Product.where(name: "Product 999") }
 
 # Add index for name
 # Rerun same query and see the different
 Product.add_index "name", unique: true
-puts Product.where(name: "Product 999").explain
-timelog { Product.where(name: "Product 999") }
+experiment { Product.where(name: "Product 999") }
 
-# OR and IN operator
-timelog("use OR") { puts Product.where(name: "Product 999").or(Product.where(name: "Product 998")).explain }
-timelog("In a range of value") { puts Product.where(serial: ["Product 999", "Product 998"]).explain }
+# OR, NOT, IN operator
+experiment("use OR") { Product.where(name: "Product 999").or(Product.where(name: "Product 998")) }
+experiment("use NOT") { Product.where.not(name: "Product 998") }
+experiment("In a range of value") { Product.where(name: ["Product 999", "Product 998"]) }
 
 # Experiment with multiple columns query
-puts "There is only index for name, not for serial column"
-timelog("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1").explain }
-timelog("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999").explain }
+experiment("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1") }
+experiment("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999") }
+
+# With 2 separate index
+Product.reset!
 
 # With no index
 Product.reset!
+Product.add_index "name", unique: true
+Product.add_index "serial", unique: true
 
-puts "There is no index"
-timelog("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1").explain }
-timelog("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999").explain }
+experiment("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1") }
+experiment("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999") }
+experiment("name use OR") { Product.where(name: "Product 999").or(Product.where(serial: "P-0999-0-1")) }
+experiment("name use NOT") { Product.where.not(name: "Product 998") }
+experiment("serial use NOT") { Product.where.not(serial: "P-0999-0-1") }
+experiment("In a range of value") { Product.where(name: ["Product 999", "Product 998"]) }
 
-# With Index for name and serial
+# With only one index for name and serial
 Product.reset!
 Product.add_index ["name", "serial"]
 
-puts Product.where(name: "Product 999", serial: "P-0999-0-1").explain
-timelog("name > serial") { puts Product.where(name: "Product 999", serial: "P-0999-0-1").explain }
+experiment("name > serial") { Product.where(name: "Product 999", serial: "P-0999-0-1") }
 
 # Reverse order of serial and name column in where clause
-puts Product.where(serial: "P-0999-0-1", name: "Product 999").explain
-timelog("serial > name") { puts Product.where(serial: "P-0999-0-1", name: "Product 999").explain }
+experiment("serial > name") { Product.where(serial: "P-0999-0-1", name: "Product 999") }
 
 # See if single column query can use multiple columns index
-timelog("single column name") { puts Product.where(name: "Product 999").explain }
-timelog("single column serial") { puts Product.where(serial: "P-0999-0-1").explain }
+experiment("single column name") { Product.where(name: "Product 999") }
+experiment("single column serial") { Product.where(serial: "P-0999-0-1") }
+
+# Run query for a column isn't in the index
+experiment("price isn't included") { Product.where(name: "Product 999", serial: "P-0999-0-1", price: 300) }
+experiment("price isn't included") { Product.where(name: "Product 999", serial: "P-0999-0-1").or(Product.where(price: 200)) }
+experiment("price isn't included") { Product.where(name: "Product 999", serial: "P-0999-0-1", price: [100,200]) }
 
 # OR and IN operator
-timelog("use OR") { puts Product.where(name: "Product 999").or(Product.where(name: "Product 998")).explain }
-timelog("In a range of value") { puts Product.where(serial: ["Product 999", "Product 998"]).explain }
+experiment("use OR") { Product.where(name: "Product 999").or(Product.where(name: "Product 998")) }
+experiment("In a range of value") { Product.where(name: ["Product 999", "Product 998"]) }

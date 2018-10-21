@@ -21,134 +21,248 @@ solution can be applied for all situation.
 When running the command `ruby app.rb`, we should see the output that is similar to:
 
 ```
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
+> Took 0.000551 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
 0|0|0|SCAN TABLE products
-Took 0.000295 seconds
+
 > Add index for [name]
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
+> Took 0.000103 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
 0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
-Took 0.000192 seconds
-use OR  EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."name" = ?) [["name", "Product 999"], ["name", "Product 998"]]
+
+| use OR
+> Took 0.000134 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."name" = ?) [["name", "Product 999"], ["name", "Product 998"]]
 0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
 0|0|0|EXECUTE LIST SUBQUERY 1
-Took 0.001949 seconds
-In a range of value     EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" IN (?, ?) [["serial", "Product 999"], ["serial", "Product 998"]]
+
+| use NOT
+> Took 0.000073 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" != ? [["name", "Product 998"]]
 0|0|0|SCAN TABLE products
-Took 0.001659 seconds
-There is only index for name, not for serial column
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+
+| In a range of value
+> Took 0.000109 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" IN (?, ?) [["name", "Product 999"], ["name", "Product 998"]]
 0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+0|0|0|EXECUTE LIST SUBQUERY 1
+
+| name > serial
+> Took 0.000056 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
 0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
-name > serial   Took 0.000766 seconds
-serial > name   Took 0.000849 seconds
-There is no index
-name > serial   Took 0.002333 seconds
-serial > name   Took 0.001623 seconds
+
+| serial > name
+> Took 0.000053 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+
+> Add index for [name]
+> Add index for [serial]
+| name > serial
+> Took 0.000134 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_serial (serial=?)
+
+| serial > name
+> Took 0.000062 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_serial (serial=?)
+
+| name use OR
+> Took 0.000149 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."serial" = ?) [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_serial (serial=?)
+
+| name use NOT
+> Took 0.000082 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" != ? [["name", "Product 998"]]
+0|0|0|SCAN TABLE products
+
+| serial use NOT
+> Took 0.000128 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" != ? [["serial", "P-0999-0-1"]]
+0|0|0|SCAN TABLE products
+
+| In a range of value
+> Took 0.000157 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" IN (?, ?) [["name", "Product 999"], ["name", "Product 998"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+0|0|0|EXECUTE LIST SUBQUERY 1
+
 > Add index for [name, serial]
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
-0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
-name > serial   Took 0.000878 seconds
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
-0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
-serial > name   Took 0.000739 seconds
-single column name      EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
-0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=?)
-Took 0.001349 seconds
-single column serial    EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? [["serial", "P-0999-0-1"]]
+| name > serial
+> Took 0.000127 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name_and_serial (name=? AND serial=?)
+
+| serial > name
+> Took 0.000074 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name_and_serial (name=? AND serial=?)
+
+| single column name
+> Took 0.000047 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name_and_serial (name=?)
+
+| single column serial
+> Took 0.000048 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? [["serial", "P-0999-0-1"]]
 0|0|0|SCAN TABLE products
-Took 0.001700 seconds
-use OR  EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."name" = ?) [["name", "Product 999"], ["name", "Product 998"]]
-0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=?)
+
+| price isn't included
+> Took 0.000066 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? AND "products"."price" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"], ["price", 300]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name_and_serial (name=? AND serial=?)
+
+| price isn't included
+> Took 0.000128 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? AND "products"."serial" = ? OR "products"."price" = ?) [["name", "Product 999"], ["serial", "P-0999-0-1"], ["price", 200]]
+0|0|0|SCAN TABLE products
+
+| price isn't included
+> Took 0.000117 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? AND "products"."price" IN (?, ?) [["name", "Product 999"], ["serial", "P-0999-0-1"], ["price", 100], ["price", 200]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name_and_serial (name=? AND serial=?)
+
+| use OR
+> Took 0.000125 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."name" = ?) [["name", "Product 999"], ["name", "Product 998"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name_and_serial (name=?)
 0|0|0|EXECUTE LIST SUBQUERY 1
-Took 0.001799 seconds
-In a range of value     EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" IN (?, ?) [["serial", "Product 999"], ["serial", "Product 998"]]
-0|0|0|SCAN TABLE products
-Took 0.001665 seconds
+
+| In a range of value
+> Took 0.000074 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" IN (?, ?) [["name", "Product 999"], ["name", "Product 998"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name_and_serial (name=?)
+0|0|0|EXECUTE LIST SUBQUERY 1
 ```
+
+There are quite a lot of information, how do we start?
+
+I must say the execution time is more less for reference, not a good evidence to say this approach is faster than
+others.
 
 ## Experiment for index with 1 column
 
-Without index, the query `Product.where(name: "Proudct 999").explain` uses SCAN strategy
+Without index, the query `Product.where(name: "Proudct 999").explain` uses `SCAN` strategy
 
-Scan basically means look up one by one record.
+`SCAN` means the database simply iterate through each record and compare each record with `WHERE` clause.
 
-We then add an index for column `name`, and the explaination for the same query tells us it now uses
-SEARCH strategy with the the new index. The time is slightly faster. Here is the explanation of the
-log for the explanation
+We add an index for column `name`, and the explanation for the same query tells us it now uses
+`SEARCH` strategy with the the new index. Here is the explanation of the log for the explanation
 
 ```
 EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
 0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
-Took 0.000199 seconds
 ```
 
-When there is index for a column appeared in search query, database will use the index to speed up the
-search, if there is no existing index, the database fallbacks to SCAN strategy, and the query take
-longer to run without an index.
+Because there is an index for column name, it uses the `SEARCH` on the index.
+
+We also experiment if the index is useful when the query is for more than 1 column, and the explanation proves that.
+
+```
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+```
+
+How's about `OR` query, or `IN`
+
+```
+| use OR
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."name" = ?) [["name", "Product 999"], ["name", "Product 998"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+0|0|0|EXECUTE LIST SUBQUERY 1
+
+| In a range of value
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" IN (?, ?) [["name", "Product 999"], ["name", "Product 998"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+0|0|0|EXECUTE LIST SUBQUERY 1
+```
+
+Cool, the index is still useful. However, SQLite3 doesn't say what is `EXECUTE LIST SUBQUERY`. We can look at the
+document to find out what is it exactly, or experiment with another database (e.g. Postgres).
 
 ## Experiment for index with multiple (2) columns
 
-We learn that database looks for index for the searched column, if the index doesn't exist, the database uses the SCAN
-strategy.
+We learn that database looks for index for the searched column, if there is no index, it will use `SCAN` strategy.
 
-In this section, we will learn how it is applied for multiple columns appearing on the search query, together with
-different strategy of indexing the data.
-
-With the same index name previous example (on name column), and the query is searching for `name` and `serial`
-
-`Product.where(name: "Product 999", serial: "P-0999-0-1").explain`
+Most of modern database system supports multiple columns, we can index some columns together in one index, instead of
+several indexes.
 
 ```
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
-0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
-```
-
-The SEARCH strategy still works, although there is no index on the `serial` column. Let's change the
-order of query condition
-
-```
-There is only index for name, not for serial column
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
-0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
-0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
-name > serial   Took 0.000263 seconds
-serial > name   Took 0.000259 seconds
-```
-
-My hypothesis is that the first query should be faster, but end up there is no significant difference.
-
-Let's go to the next experiment with 2 columns index
-
-```
-Product.add_index ["name", "serial"]
-
-puts Product.where(name: "Product 999", serial: "P-0999-0-1").explain
-timelog("name > serial") { puts Product.where(name: "Product 999", serial: "P-0999-0-1").explain }
-
-# Reverse order of serial and name column in where clause
-puts Product.where(serial: "P-0999-0-1", name: "Product 999").explain
-timelog("serial > name") { puts Product.where(serial: "P-0999-0-1", name: "Product 999").explain }
-```
-
-and the result is
-
-```
-There is no index
-name > serial   Took 0.002333 seconds
-serial > name   Took 0.001623 seconds
-
 > Add index for [name, serial]
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+| name > serial
+> Took 0.000120 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
 0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+
+| serial > name
+> Took 0.000064 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
 0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
-name > serial   Took 0.000878 seconds
-serial > name   Took 0.000739 seconds
 ```
 
-There is no different when changing the order of 2 columns in search query.
+The `SEARCH` strategy is applied til. `COVERING INDEX` is used instead of `INDEX` as previous section.
+What is different? I think it is faster, otherwise people don't want to use it.
 
-It is quite clear that with index, the execution time is faster. However, we can't say 
+Next, we try to query on 1 column to see if the multi columns index is reusable.
+
+```
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
+0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=?)
+
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? [["serial", "P-0999-0-1"]]
+0|0|0|SCAN TABLE products
+```
+
+There is a difference, finally. Only the query for column `name` reuses the index, while the query for column `serial`
+falls back to `SCAN` (ignores the index). It is an interesting figuring out, huh?
+
+How's about 2 indexes for name and serial columns
+
+```
+> Add index for [name]
+> Add index for [serial]
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_serial (serial=?)
+
+| serial > name
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_serial (serial=?)
+
+| name use OR
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."serial" = ?) [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_serial (serial=?)
+
+| name use NOT
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" != ? [["name", "Product 998"]]
+0|0|0|SCAN TABLE products
+
+| serial use NOT
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" != ? [["serial", "P-0999-0-1"]]
+0|0|0|SCAN TABLE products
+
+| In a range of value
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" IN (?, ?) [["name", "Product 999"], ["name", "Product 998"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+0|0|0|EXECUTE LIST SUBQUERY 1
+```
+
+`NOT` query doesn't use index at all, at least for the `BTREE` type of index. I will try again with Postgres database
+and show you the result. For now, we keep in mind that fact.
+
+With 2 indexes, it only uses 1 of them if the query is and AND query. With the OR query, it uses 2 indexes. A bit complicated,
+right?
+
 # Conclusion
+
+Index comes like a handly tool to improve the database query performance.
+However, we may not understand how it work, we try to add index to every column in our database and wonder why
+performance still sucks. That really depends on the way we index, type of index, etc.
+
+By knowing this, we can design a better and faster database system and write a better application. We also know when to
+add or not to add a new database index.
