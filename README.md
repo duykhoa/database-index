@@ -21,50 +21,79 @@ solution can be applied for all situation.
 When running the command `ruby app.rb`, we should see the output that is similar to:
 
 ```
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
+> Took 0.000948 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
 0|0|0|SCAN TABLE products
-Took 0.000295 seconds
+
 > Add index for [name]
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
+> Took 0.000249 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
 0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
-Took 0.000192 seconds
-use OR  EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."name" = ?) [["name", "Product 999"], ["name", "Product 998"]]
+
+| use OR
+> Took 0.000557 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."name" = ?) [["name", "Product 999"], ["name", "Product 998"]]
 0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
 0|0|0|EXECUTE LIST SUBQUERY 1
-Took 0.001949 seconds
-In a range of value     EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" IN (?, ?) [["serial", "Product 999"], ["serial", "Product 998"]]
-0|0|0|SCAN TABLE products
-Took 0.001659 seconds
-There is only index for name, not for serial column
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+
+| In a range of value
+> Took 0.000233 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" IN (?, ?) [["name", "Product 999"], ["name", "Product 998"]]
 0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+0|0|0|EXECUTE LIST SUBQUERY 1
+
+| name > serial
+> Took 0.000172 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
 0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
-name > serial   Took 0.000766 seconds
-serial > name   Took 0.000849 seconds
+
+| serial > name
+> Took 0.000169 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+
 There is no index
-name > serial   Took 0.002333 seconds
-serial > name   Took 0.001623 seconds
-> Add index for [name, serial]
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
-0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
-name > serial   Took 0.000878 seconds
-EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
-0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
-serial > name   Took 0.000739 seconds
-single column name      EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
-0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=?)
-Took 0.001349 seconds
-single column serial    EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? [["serial", "P-0999-0-1"]]
+| name > serial
+> Took 0.000147 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
 0|0|0|SCAN TABLE products
-Took 0.001700 seconds
-use OR  EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."name" = ?) [["name", "Product 999"], ["name", "Product 998"]]
+
+| serial > name
+> Took 0.000090 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+0|0|0|SCAN TABLE products
+
+> Add index for [name, serial]
+| name > serial
+> Took 0.000120 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
+
+| serial > name
+> Took 0.000064 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
+
+| single column name
+> Took 0.000055 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
+0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=?)
+
+| single column serial
+> Took 0.000059 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? [["serial", "P-0999-0-1"]]
+0|0|0|SCAN TABLE products
+
+| use OR
+> Took 0.000151 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."name" = ?) [["name", "Product 999"], ["name", "Product 998"]]
 0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=?)
 0|0|0|EXECUTE LIST SUBQUERY 1
-Took 0.001799 seconds
-In a range of value     EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" IN (?, ?) [["serial", "Product 999"], ["serial", "Product 998"]]
+
+| In a range of value
+> Took 0.000083 seconds
+> Run explanation for given query: EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" IN (?, ?) [["serial", "Product 999"], ["serial", "Product 998"]]
 0|0|0|SCAN TABLE products
-Took 0.001665 seconds
 ```
 
 ## Experiment for index with 1 column
