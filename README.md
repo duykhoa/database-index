@@ -23,48 +23,48 @@ When running the command `ruby app.rb`, we should see the output that is similar
 ```
 EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
 0|0|0|SCAN TABLE products
-Took 0.000290 seconds
+Took 0.000295 seconds
 > Add index for [name]
 EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
 0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
-Took 0.000199 seconds
+Took 0.000192 seconds
 use OR  EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."name" = ?) [["name", "Product 999"], ["name", "Product 998"]]
 0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
 0|0|0|EXECUTE LIST SUBQUERY 1
-Took 0.002029 seconds
+Took 0.001949 seconds
 In a range of value     EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" IN (?, ?) [["serial", "Product 999"], ["serial", "Product 998"]]
 0|0|0|SCAN TABLE products
-Took 0.002354 seconds
+Took 0.001659 seconds
 There is only index for name, not for serial column
-name > serial   Took 0.001837 seconds
-serial > name   Took 0.002013 seconds
+EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+name > serial   Took 0.000766 seconds
+serial > name   Took 0.000849 seconds
 There is no index
-name > serial   Took 0.001964 seconds
+name > serial   Took 0.002333 seconds
 serial > name   Took 0.001623 seconds
 > Add index for [name, serial]
 EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
 0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
-name > serial   EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
-0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
-Took 0.001182 seconds
+name > serial   Took 0.000878 seconds
 EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
 0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
-serial > name   EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
-0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
-Took 0.001265 seconds
+serial > name   Took 0.000739 seconds
 single column name      EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? [["name", "Product 999"]]
 0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=?)
-Took 0.001280 seconds
+Took 0.001349 seconds
 single column serial    EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? [["serial", "P-0999-0-1"]]
 0|0|0|SCAN TABLE products
-Took 0.001449 seconds
+Took 0.001700 seconds
 use OR  EXPLAIN for: SELECT "products".* FROM "products" WHERE ("products"."name" = ? OR "products"."name" = ?) [["name", "Product 999"], ["name", "Product 998"]]
 0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=?)
 0|0|0|EXECUTE LIST SUBQUERY 1
-Took 0.001880 seconds
+Took 0.001799 seconds
 In a range of value     EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" IN (?, ?) [["serial", "Product 999"], ["serial", "Product 998"]]
 0|0|0|SCAN TABLE products
-Took 0.001714 seconds
+Took 0.001665 seconds
 ```
 
 ## Experiment for index with 1 column
@@ -89,4 +89,66 @@ longer to run without an index.
 
 ## Experiment for index with multiple (2) columns
 
+We learn that database looks for index for the searched column, if the index doesn't exist, the database uses the SCAN
+strategy.
+
+In this section, we will learn how it is applied for multiple columns appearing on the search query, together with
+different strategy of indexing the data.
+
+With the same index name previous example (on name column), and the query is searching for `name` and `serial`
+
+`Product.where(name: "Product 999", serial: "P-0999-0-1").explain`
+
+```
+EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+```
+
+The SEARCH strategy still works, although there is no index on the `serial` column. Let's change the
+order of query condition
+
+```
+There is only index for name, not for serial column
+EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+0|0|0|SEARCH TABLE products USING INDEX index_products_on_name (name=?)
+name > serial   Took 0.000263 seconds
+serial > name   Took 0.000259 seconds
+```
+
+My hypothesis is that the first query should be faster, but end up there is no significant difference.
+
+Let's go to the next experiment with 2 columns index
+
+```
+Product.add_index ["name", "serial"]
+
+puts Product.where(name: "Product 999", serial: "P-0999-0-1").explain
+timelog("name > serial") { puts Product.where(name: "Product 999", serial: "P-0999-0-1").explain }
+
+# Reverse order of serial and name column in where clause
+puts Product.where(serial: "P-0999-0-1", name: "Product 999").explain
+timelog("serial > name") { puts Product.where(serial: "P-0999-0-1", name: "Product 999").explain }
+```
+
+and the result is
+
+```
+There is no index
+name > serial   Took 0.002333 seconds
+serial > name   Took 0.001623 seconds
+
+> Add index for [name, serial]
+EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."name" = ? AND "products"."serial" = ? [["name", "Product 999"], ["serial", "P-0999-0-1"]]
+0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
+EXPLAIN for: SELECT "products".* FROM "products" WHERE "products"."serial" = ? AND "products"."name" = ? [["serial", "P-0999-0-1"], ["name", "Product 999"]]
+0|0|0|SEARCH TABLE products USING COVERING INDEX index_products_on_name_and_serial (name=? AND serial=?)
+name > serial   Took 0.000878 seconds
+serial > name   Took 0.000739 seconds
+```
+
+There is no different when changing the order of 2 columns in search query.
+
+It is quite clear that with index, the execution time is faster. However, we can't say 
 # Conclusion
